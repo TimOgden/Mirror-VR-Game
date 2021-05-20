@@ -15,7 +15,7 @@ public class XRDirectAnimatedInteractor : XRDirectInteractor
         if(interactable.transform.tag=="Flashlight")
         {
             handValue = 0.0f;
-        } else if(interactable.transform.tag=="Mirror")
+        } else if(interactable.transform.tag=="Battery")
         {
             handValue = 0.5f;
         } else
@@ -25,12 +25,10 @@ public class XRDirectAnimatedInteractor : XRDirectInteractor
 
         if (isLeft)
         {  
-            Debug.Log("LeftHandGrab");
             animator.SetBool("leftHoldingObject", true);
             animator.SetFloat("leftGrab", handValue);
         } else
         {
-            Debug.Log("RightHandGrab");
             animator.SetBool("rightHoldingObject", true);
             animator.SetFloat("rightGrab", handValue);
         }
@@ -41,12 +39,10 @@ public class XRDirectAnimatedInteractor : XRDirectInteractor
         base.OnSelectExiting(interactable);
         if (isLeft)
         {
-            Debug.Log("LeftHandRelease");
             animator.SetBool("leftHoldingObject", false);
         }
         else
         {
-            Debug.Log("RightHandRelease");
             animator.SetBool("rightHoldingObject", false);
         }
     }

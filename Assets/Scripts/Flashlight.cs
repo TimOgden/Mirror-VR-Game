@@ -30,10 +30,11 @@ public class Flashlight : MonoBehaviour
             light.intensity = 0.0f;
         } else if (batteryPercent>0f && batteryPercent<=20f)
         {
-            light.intensity = (Mathf.PerlinNoise(Time.time, 0.0f) + Mathf.PerlinNoise(Time.time * 0.5f, 0.0f)) * almostDeadIntensity + .75f;
+            light.intensity = (Mathf.PerlinNoise(Time.time, 0.0f) + Mathf.PerlinNoise(Time.time * 0.5f, 0.0f)
+                + Mathf.PerlinNoise(Time.time * 0.25f, 0.0f)) * almostDeadIntensity/3;
         } else if(batteryPercent>20f && batteryPercent<40f)
         {
-            light.intensity = Mathf.PerlinNoise(Time.time, 0.0f) * lowBatteryIntensity + 1.0f;
+            light.intensity = Mathf.PerlinNoise(Time.time, 0.0f) * lowBatteryIntensity;
         } else
         {
             light.intensity = defaultIntensity;
