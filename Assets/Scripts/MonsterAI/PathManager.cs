@@ -11,8 +11,9 @@ public class PathManager : MonoBehaviour
 	private Animator animator;
 	public Transform player;
 	private Stack<Vector3> shortestPath;
-	private Vector3 currentWaypointPosition;
+	
 	private bool followedLastOptimalNode = false;
+	private Waypoint currentWaypoint;
 	private Waypoint nextWaypoint;
 
 	public void NavigateTo(Vector3 destination) {
@@ -100,7 +101,7 @@ public class PathManager : MonoBehaviour
     	return probabilities.Count - 1;
     }
 
-    public Waypoint GetNextRandomizedDestination() {
+    public Waypoint GetNextRandomDestination() {
     	//if(!followedLastOptimalNode)
     	NavigateTo(player.position);
     	if(shortestPath.Count <= 0)
@@ -141,16 +142,37 @@ public class PathManager : MonoBehaviour
     		followedLastOptimalNode = true;
     	else
     		followedLastOptimalNode = false;
+    	nextWaypoint = neighbors[rand_index];
     	return neighbors[rand_index];
     }
 
-    public void AssignNextDestination() {
-    	nextWaypoint = GetNextRandomizedDestination();
+    private Waypoint GetNeighborInDirection(Waypoint origin, Vector3 direction) {
+    	float smallest_angle = Mathf.Infinity;
+    	Waypoint smallest_angle_waypoint = null;
+    	foreach(var neighbor in origin.neighbors) {
+			if(neighbor==null)
+				continue;
+			float angle = Vector3.Angle(direction, (neighbor.transform.position - origin.transform.position));
+			if(angle<smallest_angle) {
+				smallest_angle = angle;
+				smallest_angle_waypoint = neighbor;
+			}
+    	}
+    	return smallest_angle_waypoint;
+    }
+
+    public Waypoint GetRefugePoint(Vector3 mirrorPosition) {
+    	if(currentWaypoint==null) {
+    		currentWaypoint = FindClosestWaypoint(transform.position);
+    	}
+    	return GetNeighborInDirection(currentWaypoint, (transform.position - mirrorPosition));
     }
 
     public void MoveAgent() {
     	if (nextWaypoint != null) {
     		agent.SetDestination(nextWaypoint.transform.position);
+    		nextWaypoint.greenChannel = 1f;
+    		nextWaypoint.StartCoroutine(nextWaypoint.ResetGreenChannel());
     		foreach(var neighbor in nextWaypoint.neighbors) {
     			neighbor.redChannel = 0f;
     		}

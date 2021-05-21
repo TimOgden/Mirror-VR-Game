@@ -51,7 +51,7 @@ public class MonsterAI : MonoBehaviour
 		// monster saw itself, note location of spotter and set refugePoint to
 		// opposite direction of spotter and maybe find hiding point near there.
 		numSpots += 1;
-		refugePoint = RandomNavMeshPoint(transform.position - (spotter.transform.position - transform.position)*10, 1f);
+		refugePoint = pathManager.GetRefugePoint(spotter.transform.position).transform.position;
 		locationOfInterest = spotter.transform.position;
 	}
 
@@ -106,9 +106,8 @@ public class MonsterAI : MonoBehaviour
         patrol.AddState("Idle", new State(
         	onEnter: (state) => {
         		locationOfInterest = Vector3.positiveInfinity;
-        		pathManager.canSetDestination = false;
         		idleTime = Random.Range(idleTimeRange[0], idleTimeRange[1]);
-        		pathManager.AssignNextDestination();
+        		pathManager.GetNextRandomDestination();
         	},
         	onLogic: (state) => {
         		if(state.timer > idleTime)
@@ -122,24 +121,37 @@ public class MonsterAI : MonoBehaviour
         fsm.AddState("Run Away", new State(
         	onEnter: (state) => {
         		agent.speed = 1f;
-        		agent.SetDestination(RandomNavMeshPoint(transform.position - transform.forward * 10f, 1f));
-        	},
+        		agent.SetDestination(refugePoint);
+        	}, onLogic: (state) => agent.SetDestination(refugePoint),
         debug: debug));
 
         fsm.AddState("Suspicious", new State(
         	onEnter: (state) => {
-        		pathManager.canSetDestination = false;
+        		animator.SetBool("crouched", false);
+        		agent.speed = .75f;
+        		agent.SetDestination(locationOfInterest);
+        	}, onLogic: (state) => {
+        		if(state.timer>15f)
+        			state.fsm.StateCanExit();
+        		agent.SetDestination(locationOfInterest);
+        	}, debug: debug, needsExitTime: true
+        ));
+        
+        fsm.AddState("Sneaking Up", new State(
+        	onEnter: (state) => {
         		animator.SetBool("crouched", true);
         		agent.speed = .5f;
         		agent.SetDestination(locationOfInterest);
         		},
         	onLogic: (state) => {
-        		agent.SetDestination(locationOfInterest);
+    			agent.SetDestination(locationOfInterest);
         	},
         	onExit: (state) => {
         		animator.SetBool("crouched", false);
-        		}, debug: debug
+        		}, debug: debug, needsExitTime: true
         ));
+
+
 
         fsm.AddState("Attacking", new State(
         	onEnter: (state) => {
@@ -155,11 +167,11 @@ public class MonsterAI : MonoBehaviour
         ));
 
         fsm.AddTransitionFromAny(new Transition("", "Run Away", (transition) => numSpots>0));
-        fsm.AddTransition(new Transition("Run Away", "Suspicious", (transition) => AgentReachedDestination()));
-        fsm.AddTransition(new Transition("Patrolling", "Suspicious", (transition) => awareness>=.25f));
-        fsm.AddTransition(new Transition("Suspicious", "Patrolling", (transition) => awareness<.25f));
-        fsm.AddTransition(new Transition("Suspicious", "Attacking", (transition) => awareness>=.75f && agent.remainingDistance <= 4f));
-        fsm.AddTransition(new Transition("Attacking", "Suspicious", (transition) => !CheckForPlayer() && AgentReachedDestination() && awareness<=.74f));
+        fsm.AddTransition(new Transition("Run Away", "Sneaking Up", (transition) => AgentReachedDestination()));
+        fsm.AddTransition(new Transition("Patrolling", "Sneaking Up", (transition) => awareness>=.25f));
+        fsm.AddTransition(new Transition("Sneaking Up", "Patrolling", (transition) => awareness<.25f));
+        fsm.AddTransition(new Transition("Sneaking Up", "Attacking", (transition) => awareness>=.75f && agent.remainingDistance <= 4f));
+        fsm.AddTransition(new Transition("Attacking", "Sneaking Up", (transition) => !CheckForPlayer() && AgentReachedDestination() && awareness<=.74f));
         // Don't change
         patrol.SetStartState("Idle");
         fsm.Init();
@@ -180,9 +192,6 @@ public class MonsterAI : MonoBehaviour
         Vector3 velocity = transform.InverseTransformDirection(agent.velocity);
         animator.SetFloat("Forward", velocity.z);
         animator.SetFloat("Turn", velocity.x);
-        if(numSpots==0) {
-        	refugePoint = Vector3.positiveInfinity;
-        }
         numSpots = 0;
     }
 }
