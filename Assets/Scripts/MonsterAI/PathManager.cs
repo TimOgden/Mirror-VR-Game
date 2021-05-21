@@ -6,8 +6,6 @@ using System.Linq;
 
 public class PathManager : MonoBehaviour
 {
-
-	public bool canSetDestination; // monster ai should set this to true when in patrolling state.
 	public float temperature;
 	private NavMeshAgent agent;
 	private Animator animator;
@@ -15,6 +13,7 @@ public class PathManager : MonoBehaviour
 	private Stack<Vector3> shortestPath;
 	private Vector3 currentWaypointPosition;
 	private bool followedLastOptimalNode = false;
+	private Waypoint nextWaypoint;
 
 	public void NavigateTo(Vector3 destination) {
 		shortestPath = new Stack<Vector3>();
@@ -40,7 +39,7 @@ public class PathManager : MonoBehaviour
 				if(closedList.Contains(neighbor) || openList.ContainsValue(neighbor))
 					continue;
 				if(neighbor==null) {
-					Debug.Log("Neighbor is null: " + neighbor.transform.name);
+					currentNode.neighbors.Remove(neighbor);
 					continue;
 				}
 				neighbor.previous = currentNode;
@@ -128,10 +127,10 @@ public class PathManager : MonoBehaviour
     	var sum_z_exp = z_exp.Sum();
     	var softmax = z_exp.Select(i => i/sum_z_exp).ToList();
     	neighbors[0].redChannel = softmax[0];
-    	neighbors[0].StartCoroutine(neighbors[0].ResetRedChannel());
+    	//neighbors[0].StartCoroutine(neighbors[0].ResetRedChannel());
     	for(int i = 1; i<neighbors.Count; i++) {
     		neighbors[i].redChannel = softmax[i];
-    		neighbors[i].StartCoroutine(neighbors[i].ResetRedChannel());
+    		//neighbors[i].StartCoroutine(neighbors[i].ResetRedChannel());
     	}
     	for(int i=0; i<neighbors.Count; i++) {
     		Debug.Log("Neighbor " + i + ": " + softmax[i]*100 + "%");
@@ -146,9 +145,16 @@ public class PathManager : MonoBehaviour
     }
 
     public void AssignNextDestination() {
-    	Waypoint next = GetNextRandomizedDestination();
-    	if (next != null)
-    		agent.SetDestination(next.transform.position);
+    	nextWaypoint = GetNextRandomizedDestination();
+    }
+
+    public void MoveAgent() {
+    	if (nextWaypoint != null) {
+    		agent.SetDestination(nextWaypoint.transform.position);
+    		foreach(var neighbor in nextWaypoint.neighbors) {
+    			neighbor.redChannel = 0f;
+    		}
+    	}
     }
 
     // Update is called once per frame

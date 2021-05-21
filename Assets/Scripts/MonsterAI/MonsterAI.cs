@@ -97,7 +97,7 @@ public class MonsterAI : MonoBehaviour
         fsm.AddState("Patrolling", patrol);
         patrol.AddState("Walking", new State(
         	onEnter: (state) => {
-        		pathManager.AssignNextDestination();
+        		pathManager.MoveAgent();
         		agent.speed = .5f;
         		locationOfInterest = Vector3.positiveInfinity;
         		}, debug: debug
@@ -108,6 +108,7 @@ public class MonsterAI : MonoBehaviour
         		locationOfInterest = Vector3.positiveInfinity;
         		pathManager.canSetDestination = false;
         		idleTime = Random.Range(idleTimeRange[0], idleTimeRange[1]);
+        		pathManager.AssignNextDestination();
         	},
         	onLogic: (state) => {
         		if(state.timer > idleTime)
