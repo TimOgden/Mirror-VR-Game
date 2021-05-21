@@ -11,8 +11,9 @@ public class PathManager : MonoBehaviour
 	private Animator animator;
 	public Transform player;
 	private Stack<Vector3> shortestPath;
-	private Vector3 currentWaypointPosition;
+	
 	private bool followedLastOptimalNode = false;
+	private Waypoint currentWaypoint;
 	private Waypoint nextWaypoint;
 
 	public void NavigateTo(Vector3 destination) {
@@ -106,6 +107,7 @@ public class PathManager : MonoBehaviour
     	if(shortestPath.Count <= 0)
     		return null;
     	Waypoint currentNode = FindClosestWaypoint(shortestPath.Pop());
+    	currentWaypoint = currentNode;
     	int num_neighbors = currentNode.neighbors.Count;
     	int remainingDistanceInOptimalPath = shortestPath.Count;
     	//shortestPath.Pop(); //skip the first node which is where monster already is
@@ -126,11 +128,9 @@ public class PathManager : MonoBehaviour
     	var z_exp = probabilities.Select(i => Mathf.Exp(i / temperature));
     	var sum_z_exp = z_exp.Sum();
     	var softmax = z_exp.Select(i => i/sum_z_exp).ToList();
-    	neighbors[0].redChannel = softmax[0];
-    	//neighbors[0].StartCoroutine(neighbors[0].ResetRedChannel());
+    	neighbors[0].redChannel = Mathf.Min(softmax[0] * softmax.Count, 1f);
     	for(int i = 1; i<neighbors.Count; i++) {
-    		neighbors[i].redChannel = softmax[i];
-    		//neighbors[i].StartCoroutine(neighbors[i].ResetRedChannel());
+    		neighbors[i].redChannel = Mathf.Min(softmax[i] * softmax.Count, 1f);
     	}
     	for(int i=0; i<neighbors.Count; i++) {
     		Debug.Log("Neighbor " + i + ": " + softmax[i]*100 + "%");
@@ -151,7 +151,7 @@ public class PathManager : MonoBehaviour
     public void MoveAgent() {
     	if (nextWaypoint != null) {
     		agent.SetDestination(nextWaypoint.transform.position);
-    		foreach(var neighbor in nextWaypoint.neighbors) {
+    		foreach(var neighbor in currentWaypoint.neighbors) {
     			neighbor.redChannel = 0f;
     		}
     	}
