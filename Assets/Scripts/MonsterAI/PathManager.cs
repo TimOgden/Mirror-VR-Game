@@ -118,7 +118,6 @@ public class PathManager : MonoBehaviour
     	probabilities.Add(remainingDistanceInOptimalPath/num_neighbors);
     	foreach(Waypoint waypoint in currentNode.neighbors) {
     		if(nextOptimalNode==waypoint) {
-    			Debug.Log("Skipping repetition of optimal node");
     			continue;
     		}
     		neighbors.Add(waypoint);
@@ -128,8 +127,15 @@ public class PathManager : MonoBehaviour
     	var z_exp = probabilities.Select(i => Mathf.Exp(i / temperature));
     	var sum_z_exp = z_exp.Sum();
     	var softmax = z_exp.Select(i => i/sum_z_exp).ToList();
-    	foreach(var z in softmax)
-    		Debug.Log(z);
+    	neighbors[0].redChannel = softmax[0];
+    	neighbors[0].StartCoroutine(neighbors[0].ResetRedChannel());
+    	for(int i = 1; i<neighbors.Count; i++) {
+    		neighbors[i].redChannel = softmax[i];
+    		neighbors[i].StartCoroutine(neighbors[i].ResetRedChannel());
+    	}
+    	for(int i=0; i<neighbors.Count; i++) {
+    		Debug.Log("Neighbor " + i + ": " + softmax[i]*100 + "%");
+    	}
     	int rand_index = RandomChoice(softmax);
     	Debug.Log("Chosen index: " + rand_index);
     	if(rand_index == 0)

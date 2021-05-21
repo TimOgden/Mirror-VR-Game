@@ -4,8 +4,9 @@ using UnityEngine;
 
 public class Waypoint : MonoBehaviour
 {
-	private static readonly Color bidirectionalColor = new Color(0, 254f, 255f);
-	private static readonly Color monodirectionalColor = new Color(255f, 25f, 0f);
+	public static readonly Color unidirectional = new Color(1f, .59f, 1f, 1f);
+	public static readonly Color bidirectional = new Color(1f, .59f, 0f, 1f);
+	public float redChannel = 0f;
     public List<Waypoint> neighbors = new List<Waypoint>();
     public bool oneWay;
     public Waypoint previous
@@ -16,15 +17,22 @@ public class Waypoint : MonoBehaviour
     void OnDrawGizmos() {
     	if (neighbors == null)
     		return;
+    	Gizmos.color = new Color(redChannel, 0f, 0f, 1f);
+    	Gizmos.DrawSphere(transform.position, .5f);
     	foreach(var neighbor in neighbors) {
     		if (neighbor!=null) {
     			if(neighbor.neighbors.Contains(this))
-    				Gizmos.color = bidirectionalColor;
+    				Gizmos.color = bidirectional;
     			else
-    				Gizmos.color = monodirectionalColor;
+    				Gizmos.color = unidirectional;
     			Gizmos.DrawLine(transform.position, neighbor.transform.position);
     		}
     	}
+    }
+
+    public IEnumerator ResetRedChannel() {
+    	yield return new WaitForSeconds(3f);
+    	redChannel = 0f;
     }
 
     void OnValidate() {

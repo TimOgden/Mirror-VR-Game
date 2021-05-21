@@ -21,7 +21,8 @@ public class MonsterAI : MonoBehaviour
 	private int numSpots = 0; // How many mirrors spotted the monster last frame?
 	private float awareness;
 	private Vector3 refugePoint = Vector3.positiveInfinity; //Where the monster should run to after it detects itself
-
+	private float idleTime; // is picked at random each time monster enters 'Idle' state.
+	public Vector2 idleTimeRange = new Vector2(3f, 12f);
 	// The location the monster is interested in, either the player's
 	// last location or a source of sound.
 	private Vector3 locationOfInterest = Vector3.positiveInfinity;
@@ -106,9 +107,10 @@ public class MonsterAI : MonoBehaviour
         	onEnter: (state) => {
         		locationOfInterest = Vector3.positiveInfinity;
         		pathManager.canSetDestination = false;
+        		idleTime = Random.Range(idleTimeRange[0], idleTimeRange[1]);
         	},
         	onLogic: (state) => {
-        		if(state.timer > 10)
+        		if(state.timer > idleTime)
         			state.fsm.StateCanExit();
         		},
         		needsExitTime: true, debug: debug));
