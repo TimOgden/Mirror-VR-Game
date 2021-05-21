@@ -10,8 +10,9 @@ public class PathManager : MonoBehaviour
 	private NavMeshAgent agent;
 	private Animator animator;
 	public Transform player;
+	public bool debug = false;
+
 	private Stack<Vector3> shortestPath;
-	
 	private bool followedLastOptimalNode = false;
 	private Waypoint currentWaypoint;
 	private Waypoint nextWaypoint;
@@ -133,11 +134,14 @@ public class PathManager : MonoBehaviour
     		neighbors[i].redChannel = softmax[i];
     		//neighbors[i].StartCoroutine(neighbors[i].ResetRedChannel());
     	}
-    	for(int i=0; i<neighbors.Count; i++) {
-    		Debug.Log("Neighbor " + i + ": " + softmax[i]*100 + "%");
-    	}
+    	if(debug) {
+	    	for(int i=0; i<neighbors.Count; i++) {
+	    		Debug.Log("Neighbor " + i + ": " + softmax[i]*100 + "%");
+	    	}
+	    }
     	int rand_index = RandomChoice(softmax);
-    	Debug.Log("Chosen index: " + rand_index);
+    	if(debug)
+    		Debug.Log("Chosen index: " + rand_index);
     	if(rand_index == 0)
     		followedLastOptimalNode = true;
     	else

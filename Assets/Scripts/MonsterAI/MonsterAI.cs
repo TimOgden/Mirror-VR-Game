@@ -100,9 +100,11 @@ public class MonsterAI : MonoBehaviour
         		pathManager.MoveAgent();
         		agent.speed = .5f;
         		locationOfInterest = Vector3.positiveInfinity;
-        		}, debug: debug
-        	)
-        );
+        	}, onLogic: (state) => {
+        		if(numSpots > 0)
+        			fsm.RequestStateChange("Run Away", forceInstantly: true);
+        	}, debug: debug
+        ));
         patrol.AddState("Idle", new State(
         	onEnter: (state) => {
         		locationOfInterest = Vector3.positiveInfinity;
@@ -110,33 +112,37 @@ public class MonsterAI : MonoBehaviour
         		pathManager.GetNextRandomDestination();
         	},
         	onLogic: (state) => {
+        		if(numSpots > 0) {
+        			fsm.RequestStateChange("Run Away", forceInstantly: true);
+        		}
         		if(state.timer > idleTime)
         			state.fsm.StateCanExit();
         		},
-        		needsExitTime: true, debug: debug));
+        		needsExitTime: true, debug: debug
+        ));
         patrol.AddTransition(new Transition("Walking", "Idle", 
         	(transition) => AgentReachedDestination()));
         patrol.AddTransition(new Transition("Idle", "Walking"));
         
         fsm.AddState("Run Away", new State(
         	onEnter: (state) => {
+        		animator.SetBool("crouched", false);
         		agent.speed = 1f;
         		agent.SetDestination(refugePoint);
-        	}, onLogic: (state) => agent.SetDestination(refugePoint),
+        	},
         debug: debug));
 
         fsm.AddState("Suspicious", new State(
         	onEnter: (state) => {
         		animator.SetBool("crouched", false);
-        		agent.speed = .75f;
+        		agent.speed = .6f;
         		agent.SetDestination(locationOfInterest);
         	}, onLogic: (state) => {
-        		if(state.timer>15f)
-        			state.fsm.StateCanExit();
-        		agent.SetDestination(locationOfInterest);
-        	}, debug: debug, needsExitTime: true
+        		if(numSpots > 0)
+        			fsm.RequestStateChange("Run Away", forceInstantly: true);
+        	}, debug: debug, needsExitTime: false
         ));
-        
+
         fsm.AddState("Sneaking Up", new State(
         	onEnter: (state) => {
         		animator.SetBool("crouched", true);
@@ -144,11 +150,13 @@ public class MonsterAI : MonoBehaviour
         		agent.SetDestination(locationOfInterest);
         		},
         	onLogic: (state) => {
+        		if(numSpots > 0)
+        			fsm.RequestStateChange("Run Away", forceInstantly: true);
     			agent.SetDestination(locationOfInterest);
         	},
         	onExit: (state) => {
         		animator.SetBool("crouched", false);
-        		}, debug: debug, needsExitTime: true
+        		}, debug: debug, needsExitTime: false
         ));
 
 
@@ -160,18 +168,24 @@ public class MonsterAI : MonoBehaviour
         		agent.SetDestination(locationOfInterest);
         		playerCamera.cullingMask |= 1 << LayerMask.NameToLayer("Monster");
         	},
-        	onLogic: (state) => agent.SetDestination(locationOfInterest),
+        	onLogic: (state) => {
+        		if(numSpots > 0)
+        			fsm.RequestStateChange("Run Away", forceInstantly: true);
+        		agent.SetDestination(locationOfInterest);
+        	},
         	onExit: (state) => {
         		playerCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Monster"));
         	}, debug: debug
         ));
 
         fsm.AddTransitionFromAny(new Transition("", "Run Away", (transition) => numSpots>0));
-        fsm.AddTransition(new Transition("Run Away", "Sneaking Up", (transition) => AgentReachedDestination()));
-        fsm.AddTransition(new Transition("Patrolling", "Sneaking Up", (transition) => awareness>=.25f));
-        fsm.AddTransition(new Transition("Sneaking Up", "Patrolling", (transition) => awareness<.25f));
+        fsm.AddTransition(new Transition("Run Away", "Suspicious", (transition) => AgentReachedDestination()));
+        fsm.AddTransition(new Transition("Patrolling","Suspicious",(transition) => awareness>=.1f));
+        fsm.AddTransition(new Transition("Suspicious", "Patrolling", (transition) => awareness<.1f && AgentReachedDestination()));
+        fsm.AddTransition(new Transition("Suspicious", "Sneaking Up", (transition) => awareness>=.25f));
+        fsm.AddTransition(new Transition("Sneaking Up", "Suspicious", (transition) => awareness<.25f));
         fsm.AddTransition(new Transition("Sneaking Up", "Attacking", (transition) => awareness>=.75f && agent.remainingDistance <= 4f));
-        fsm.AddTransition(new Transition("Attacking", "Sneaking Up", (transition) => !CheckForPlayer() && AgentReachedDestination() && awareness<=.74f));
+        fsm.AddTransition(new Transition("Attacking", "Suspicious", (transition) => !CheckForPlayer() && AgentReachedDestination() && awareness<=.74f));
         // Don't change
         patrol.SetStartState("Idle");
         fsm.Init();
@@ -185,13 +199,14 @@ public class MonsterAI : MonoBehaviour
     void Update()
     {
     	CheckForPlayer();
-    	fsm.OnLogic();
-    	//Debug.Log("awareness:" + awareness);
+    	
+    	Debug.Log("awareness:" + awareness);
     	if(agent.enabled)
     		sphere.position = agent.destination;
         Vector3 velocity = transform.InverseTransformDirection(agent.velocity);
         animator.SetFloat("Forward", velocity.z);
         animator.SetFloat("Turn", velocity.x);
+        fsm.OnLogic();
         numSpots = 0;
     }
 }
