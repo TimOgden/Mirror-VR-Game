@@ -15,7 +15,7 @@ public class PathManager : MonoBehaviour
 	private Stack<Vector3> shortestPath;
 	private bool followedLastOptimalNode = false;
 	private Waypoint currentWaypoint;
-	private Waypoint nextWaypoint;
+	public Waypoint nextWaypoint;
 
 	public void NavigateTo(Vector3 destination) {
 		shortestPath = new Stack<Vector3>();
@@ -177,7 +177,7 @@ public class PathManager : MonoBehaviour
     		agent.SetDestination(nextWaypoint.transform.position);
     		nextWaypoint.greenChannel = 1f;
     		nextWaypoint.StartCoroutine(nextWaypoint.ResetGreenChannel());
-    		foreach(var neighbor in nextWaypoint.neighbors) {
+    		foreach(var neighbor in currentWaypoint.neighbors) {
     			neighbor.redChannel = 0f;
     		}
     	}

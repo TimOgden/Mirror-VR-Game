@@ -32,6 +32,6 @@ public class KillPlayer : MonoBehaviour
 
     private IEnumerator ResetScene() {
     	yield return new WaitForSeconds(5f);
-    	SceneManager.LoadScene("ai_testing");
+    	SceneManager.LoadScene("pathfinding_testing");
     }
 }
