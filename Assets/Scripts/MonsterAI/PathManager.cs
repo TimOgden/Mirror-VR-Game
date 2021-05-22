@@ -10,11 +10,12 @@ public class PathManager : MonoBehaviour
 	private NavMeshAgent agent;
 	private Animator animator;
 	public Transform player;
+	public bool debug = false;
+
 	private Stack<Vector3> shortestPath;
-	
 	private bool followedLastOptimalNode = false;
 	private Waypoint currentWaypoint;
-	private Waypoint nextWaypoint;
+	public Waypoint nextWaypoint;
 
 	public void NavigateTo(Vector3 destination) {
 		shortestPath = new Stack<Vector3>();
@@ -101,7 +102,7 @@ public class PathManager : MonoBehaviour
     	return probabilities.Count - 1;
     }
 
-    public Waypoint GetNextRandomizedDestination() {
+    public Waypoint GetNextRandomDestination() {
     	//if(!followedLastOptimalNode)
     	NavigateTo(player.position);
     	if(shortestPath.Count <= 0)
@@ -132,20 +133,42 @@ public class PathManager : MonoBehaviour
     	for(int i = 1; i<neighbors.Count; i++) {
     		neighbors[i].redChannel = Mathf.Min(softmax[i] * softmax.Count, 1f);
     	}
-    	for(int i=0; i<neighbors.Count; i++) {
-    		Debug.Log("Neighbor " + i + ": " + softmax[i]*100 + "%");
-    	}
+    	if(debug) {
+	    	for(int i=0; i<neighbors.Count; i++) {
+	    		Debug.Log("Neighbor " + i + ": " + softmax[i]*100 + "%");
+	    	}
+	    }
     	int rand_index = RandomChoice(softmax);
-    	Debug.Log("Chosen index: " + rand_index);
+    	if(debug)
+    		Debug.Log("Chosen index: " + rand_index);
     	if(rand_index == 0)
     		followedLastOptimalNode = true;
     	else
     		followedLastOptimalNode = false;
+    	nextWaypoint = neighbors[rand_index];
     	return neighbors[rand_index];
     }
 
-    public void AssignNextDestination() {
-    	nextWaypoint = GetNextRandomizedDestination();
+    private Waypoint GetNeighborInDirection(Waypoint origin, Vector3 direction) {
+    	float smallest_angle = Mathf.Infinity;
+    	Waypoint smallest_angle_waypoint = null;
+    	foreach(var neighbor in origin.neighbors) {
+			if(neighbor==null)
+				continue;
+			float angle = Vector3.Angle(direction, (neighbor.transform.position - origin.transform.position));
+			if(angle<smallest_angle) {
+				smallest_angle = angle;
+				smallest_angle_waypoint = neighbor;
+			}
+    	}
+    	return smallest_angle_waypoint;
+    }
+
+    public Waypoint GetRefugePoint(Vector3 mirrorPosition) {
+    	if(currentWaypoint==null) {
+    		currentWaypoint = FindClosestWaypoint(transform.position);
+    	}
+    	return GetNeighborInDirection(currentWaypoint, (transform.position - mirrorPosition));
     }
 
     public void MoveAgent() {

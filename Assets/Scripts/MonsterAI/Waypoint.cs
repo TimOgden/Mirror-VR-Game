@@ -7,6 +7,7 @@ public class Waypoint : MonoBehaviour
 	public static readonly Color unidirectional = new Color(1f, .59f, 1f, 1f);
 	public static readonly Color bidirectional = new Color(1f, .59f, 0f, 1f);
 	public float redChannel = 0f;
+	public float greenChannel = 0f;
     public List<Waypoint> neighbors = new List<Waypoint>();
     public bool oneWay;
     public Waypoint previous
@@ -17,7 +18,7 @@ public class Waypoint : MonoBehaviour
     void OnDrawGizmos() {
     	if (neighbors == null)
     		return;
-    	Gizmos.color = new Color(redChannel, 0f, 0f, 1f);
+    	Gizmos.color = new Color(redChannel, greenChannel, 0f, 1f);
     	Gizmos.DrawSphere(transform.position, .5f);
     	foreach(var neighbor in neighbors) {
     		if (neighbor!=null) {
@@ -33,6 +34,11 @@ public class Waypoint : MonoBehaviour
     public IEnumerator ResetRedChannel() {
     	yield return new WaitForSeconds(3f);
     	redChannel = 0f;
+    }
+
+    public IEnumerator ResetGreenChannel() {
+    	yield return new WaitForSeconds(3f);
+    	greenChannel = 0f;
     }
 
     void OnValidate() {
