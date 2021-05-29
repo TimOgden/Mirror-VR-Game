@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 public class Waypoint : MonoBehaviour
 {
@@ -8,7 +9,6 @@ public class Waypoint : MonoBehaviour
 	public static readonly Color bidirectional = new Color(1f, .59f, 0f, 1f);
     public GameObject waypointPrefab;
 	public float probability;
-    public float chosen;
     public List<Waypoint> neighbors = new List<Waypoint>();
     public bool oneWay;
     public bool createNeighbor;
@@ -57,10 +57,12 @@ public class Waypoint : MonoBehaviour
 
         if(createNeighbor) {
             createNeighbor = false;
-            Waypoint neighbor = Object.Instantiate(waypointPrefab, transform.parent).GetComponent<Waypoint>();
-            //neighbors.Add(neighbor);
-            //neighbor.neighbors = new List<Waypoint>();
-            //neighbor.neighbors.Add(this);
+            Waypoint newPoint = Object.Instantiate(waypointPrefab, transform.parent).GetComponent<Waypoint>();
+            newPoint.neighbors = new List<Waypoint>();
+            newPoint.neighbors.Add(this);
+            if(!oneWay)
+                neighbors.Add(newPoint);
+            Selection.activeGameObject = newPoint.gameObject;
         }
     }
 
