@@ -101,6 +101,8 @@ public class MonsterAI : MonoBehaviour
         fsm.AddState("Patrolling", patrol);
         patrol.AddState("Walking", new State(
         	onEnter: (state) => {
+                if(pathManager.nextWaypoint==null)
+                    pathManager.GetNextRandomDestination();
         		agent.SetDestination(pathManager.nextWaypoint.transform.position);
         		agent.speed = .5f;
         	}, debug: debug

@@ -6,17 +6,19 @@ public class Waypoint : MonoBehaviour
 {
 	public static readonly Color unidirectional = new Color(1f, .59f, 1f, 1f);
 	public static readonly Color bidirectional = new Color(1f, .59f, 0f, 1f);
+    public GameObject waypointPrefab;
 	public float probability;
     public float chosen;
     public List<Waypoint> neighbors = new List<Waypoint>();
     public bool oneWay;
+    public bool createNeighbor;
     public Waypoint previous
     	{ get; set; }
     public float distance
     	{ get; set; }
 
     void OnDrawGizmos() {
-        Gizmos.color = new Color(0f, 0f, 0f, .5f);
+        Gizmos.color = new Color(0.01f, 0.84f, 1f, .25f);
     	Gizmos.DrawSphere(transform.position, .5f);
         if (neighbors == null)
             return;
@@ -52,6 +54,14 @@ public class Waypoint : MonoBehaviour
 	    		}
 	    	}
 	    }
+
+        if(createNeighbor) {
+            createNeighbor = false;
+            Waypoint neighbor = Object.Instantiate(waypointPrefab, transform.parent).GetComponent<Waypoint>();
+            //neighbors.Add(neighbor);
+            //neighbor.neighbors = new List<Waypoint>();
+            //neighbor.neighbors.Add(this);
+        }
     }
 
     void OnDisable() {
