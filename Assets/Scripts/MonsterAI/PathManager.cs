@@ -6,6 +6,7 @@ using System.Linq;
 
 public class PathManager : MonoBehaviour
 {
+	private GameObject[] allWaypoints;
 	public float temperature;
 	private NavMeshAgent agent;
 	private Animator animator;
@@ -63,10 +64,16 @@ public class PathManager : MonoBehaviour
 		shortestPath = null;
 	}
 
+	public void ResetWaypointProbabilities() {
+		foreach(GameObject waypoint in allWaypoints) {
+			waypoint.GetComponent<Waypoint>().probability = 0f;
+		}
+	}
+
 	private Waypoint FindClosestWaypoint(Vector3 target) {
 		GameObject closest = null;
 		float closestDist = Mathf.Infinity;
-		foreach(var waypoint in GameObject.FindGameObjectsWithTag("Waypoint")) {
+		foreach(var waypoint in allWaypoints) {
 			var dist = (waypoint.transform.position - target).sqrMagnitude;
 			if(dist < closestDist) {
 				closest = waypoint;
@@ -88,6 +95,7 @@ public class PathManager : MonoBehaviour
     // Start gets called before the first frame update
     void Start()
     {
+    	allWaypoints = GameObject.FindGameObjectsWithTag("Waypoint");
     	agent = GetComponent<NavMeshAgent>();
     	animator = GetComponent<Animator>();
     }
@@ -102,11 +110,11 @@ public class PathManager : MonoBehaviour
     	return probabilities.Count - 1;
     }
 
-    public Waypoint GetNextRandomDestination() {
+    public void GetNextRandomDestination() {
     	//if(!followedLastOptimalNode)
     	NavigateTo(player.position);
     	if(shortestPath.Count <= 0)
-    		return null;
+    		return;
     	Waypoint currentNode = FindClosestWaypoint(shortestPath.Pop());
     	currentWaypoint = currentNode;
     	int num_neighbors = currentNode.neighbors.Count;
@@ -117,7 +125,7 @@ public class PathManager : MonoBehaviour
     	List<Waypoint> neighbors = new List<Waypoint>();
     	List<float> probabilities = new List<float>();
     	neighbors.Add(nextOptimalNode);
-    	probabilities.Add(remainingDistanceInOptimalPath/num_neighbors);
+    	probabilities.Add((remainingDistanceInOptimalPath+1)/num_neighbors);
     	foreach(Waypoint waypoint in currentNode.neighbors) {
     		if(nextOptimalNode==waypoint) {
     			continue;
@@ -129,9 +137,8 @@ public class PathManager : MonoBehaviour
     	var z_exp = probabilities.Select(i => Mathf.Exp(i / temperature));
     	var sum_z_exp = z_exp.Sum();
     	var softmax = z_exp.Select(i => i/sum_z_exp).ToList();
-    	neighbors[0].redChannel = Mathf.Min(softmax[0] * softmax.Count, 1f);
-    	for(int i = 1; i<neighbors.Count; i++) {
-    		neighbors[i].redChannel = Mathf.Min(softmax[i] * softmax.Count, 1f);
+    	for(int i = 0; i<neighbors.Count; i++) {
+    		neighbors[i].probability = softmax[i];
     	}
     	if(debug) {
 	    	for(int i=0; i<neighbors.Count; i++) {
@@ -146,7 +153,6 @@ public class PathManager : MonoBehaviour
     	else
     		followedLastOptimalNode = false;
     	nextWaypoint = neighbors[rand_index];
-    	return neighbors[rand_index];
     }
 
     private Waypoint GetNeighborInDirection(Waypoint origin, Vector3 direction) {
@@ -171,14 +177,6 @@ public class PathManager : MonoBehaviour
     	return GetNeighborInDirection(currentWaypoint, (transform.position - mirrorPosition));
     }
 
-    public void MoveAgent() {
-    	if (nextWaypoint != null) {
-    		agent.SetDestination(nextWaypoint.transform.position);
-    		foreach(var neighbor in currentWaypoint.neighbors) {
-    			neighbor.redChannel = 0f;
-    		}
-    	}
-    }
 
     // Update is called once per frame
     void Update()

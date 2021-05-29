@@ -10,6 +10,7 @@ public class MonsterAI : MonoBehaviour
 	private Animator animator;
 	private PathManager pathManager;
 	private NavMeshAgent agent;
+    private MonsterSounds sounds;
 	public Camera playerCamera;
 	public Transform target;
 	public float walkRadius; //Remove this when we have better movement logic
@@ -93,20 +94,22 @@ public class MonsterAI : MonoBehaviour
     	animator = GetComponent<Animator>();
     	agent = GetComponent<NavMeshAgent>();
     	pathManager = GetComponent<PathManager>();
+        sounds = GetComponent<MonsterSounds>();
 
         fsm = new StateMachine(this);
         StateMachine patrol = new StateMachine(this, needsExitTime:false);
         fsm.AddState("Patrolling", patrol);
         patrol.AddState("Walking", new State(
         	onEnter: (state) => {
-        		agent.SetDestination(locationOfInterest);
+        		agent.SetDestination(pathManager.nextWaypoint.transform.position);
         		agent.speed = .5f;
         	}, debug: debug
         ));
         patrol.AddState("Idle", new State(
         	onEnter: (state) => {
+                pathManager.ResetWaypointProbabilities(); // remove after debugging
         		idleTime = Random.Range(idleTimeRange[0], idleTimeRange[1]);
-        		locationOfInterest = pathManager.GetNextRandomDestination().transform.position;
+        		pathManager.GetNextRandomDestination();
         	},
         	onLogic: (state) => {
         		if(state.timer > idleTime)
@@ -155,6 +158,7 @@ public class MonsterAI : MonoBehaviour
         fsm.AddState("Attacking", new State(
         	onEnter: (state) => {
         		animator.SetBool("crouched", false);
+                sounds.PlayDetection();
         		agent.speed = 1f;
         		agent.SetDestination(locationOfInterest);
         		playerCamera.cullingMask |= 1 << LayerMask.NameToLayer("Monster");
@@ -194,9 +198,11 @@ public class MonsterAI : MonoBehaviour
             locationOfInterest = target.transform.position;
             fsm.RequestStateChange("Run Away", forceInstantly: true);
         }
-    	refugeSphere.position = new Vector3(refugePoint.x, 0f,  refugePoint.z);;
-		locationOfInterestSphere.position = new Vector3(locationOfInterest.x, 0f, locationOfInterest.z);
-		destinationSphere.position = agent.destination;
+        if(debug) {
+        	refugeSphere.position = new Vector3(refugePoint.x, 0f,  refugePoint.z);;
+    		locationOfInterestSphere.position = new Vector3(locationOfInterest.x, 0f, locationOfInterest.z);
+    		destinationSphere.position = agent.destination;
+        }
         Vector3 velocity = transform.InverseTransformDirection(agent.velocity);
         animator.SetFloat("Forward", velocity.z);
         animator.SetFloat("Turn", velocity.x);
