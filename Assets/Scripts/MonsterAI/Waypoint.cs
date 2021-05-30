@@ -123,8 +123,9 @@ public class Waypoint : MonoBehaviour
 
 [CustomEditor(typeof(Waypoint)), CanEditMultipleObjects]
 public class WaypointEditor : Editor {
+    Waypoint waypoint;
     public override void OnInspectorGUI() {
-        var waypoint = target as Waypoint;
+        waypoint = target as Waypoint;
         waypoint.waypointPrefab = waypoint.gameObject;
         //waypoint.waypointPrefab = EditorGUILayout.ObjectField("Waypoint Prefab", waypoint.waypointPrefab, typeof(GameObject), false) as GameObject;
         //waypoint.neighbors = EditorGUILayout.ObjectField("Neighbors", waypoint.neighbors, typeof(List<GameObject>), false);
@@ -145,5 +146,32 @@ public class WaypointEditor : Editor {
                 waypoint.Disconnect();
             }
         }
+
+        if(Selection.objects.Length==2 
+            && ((GameObject)Selection.objects[0]).TryGetComponent(out Waypoint a) 
+            && ((GameObject)Selection.objects[1]).TryGetComponent(out Waypoint b)) {
+            if(GUILayout.Button("Create Midpoint")) {
+                CreateMidpoint(a, b);
+            }
+        }
+    }
+
+
+    private void CreateMidpoint(Waypoint a, Waypoint b) {
+        Waypoint c = Object.Instantiate(waypoint.gameObject, (a.transform.position + b.transform.position)/2, Quaternion.identity).GetComponent<Waypoint>();
+        if(a.neighbors.Contains(b))
+            a.neighbors.Remove(b);
+        if(b.neighbors.Contains(a))
+            b.neighbors.Remove(a);
+        c.neighbors = new List<Waypoint>();
+        c.neighbors.Add(a);
+        c.neighbors.Add(b);
+
+        if(!c.oneWay) {
+            a.neighbors.Add(c);
+            b.neighbors.Add(c);
+        }
+
+        Selection.activeGameObject = c.gameObject;
     }
 }
