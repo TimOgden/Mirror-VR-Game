@@ -11,16 +11,31 @@ public class Waypoint : MonoBehaviour
 	public float probability;
     public List<Waypoint> neighbors = new List<Waypoint>();
     public bool oneWay;
-    public bool createNeighbor;
-    public bool connect;
-    public bool disconnect;
     public Waypoint previous
     	{ get; set; }
     public float distance
     	{ get; set; }
 
+
+    void Start() {
+        List<Waypoint> toRemove = new List<Waypoint>();
+        foreach(var neighbor in neighbors) {
+            if(ReferenceEquals(neighbor, null) ? false : (neighbor ? false : true))
+                toRemove.Add(neighbor);
+        }
+
+        foreach(var neighbor in toRemove) {
+            neighbors.Remove(neighbor);
+        }
+    }
+
     void OnDrawGizmos() {
         Gizmos.color = new Color(0.01f, 0.84f, 1f, .25f);
+        foreach(GameObject go in Selection.objects) {
+            if(go==this.gameObject)
+                Gizmos.color = new Color(1f, .9f, 0f, .5f);
+        }
+            
     	Gizmos.DrawSphere(transform.position, .5f);
         if (neighbors == null)
             return;
@@ -37,67 +52,59 @@ public class Waypoint : MonoBehaviour
         Gizmos.DrawRay(transform.position, Vector3.up * probability * 15f);
     }
 
-
-    void OnValidate() {
-    	if(!oneWay) {
-	    	foreach (var neighbor in neighbors) {
-	    		if(neighbor != null) {
-		    		if(neighbor.neighbors.Contains(this))
-		    			continue;
-		    		neighbor.neighbors.Add(this);
-		    	}
-	    	}
-	    }
-	    if(oneWay) {
-	    	foreach(var neighbor in neighbors) {
-	    		if(neighbor != null) {
-	    			if(neighbor.neighbors.Contains(this))
-	    				neighbor.neighbors.Remove(this);
-	    		}
-	    	}
-	    }
-
-        if(createNeighbor) {
-            if(Selection.objects.Length>1) {
-                Debug.Log("Too many waypoints selected, adjacent nodes would be ambiguous.");
-                return;
-            }
-            createNeighbor = false;
-            Waypoint newPoint = Object.Instantiate(waypointPrefab, transform.parent).GetComponent<Waypoint>();
-            newPoint.neighbors = new List<Waypoint>();
-            newPoint.neighbors.Add(this);
-            if(!oneWay)
-                neighbors.Add(newPoint);
-            Selection.activeGameObject = newPoint.gameObject;
-        }
-
-        if(connect) {
-            connect = false;
-            if(Selection.objects.Length<2) {
-                Debug.Log("Not enough waypoints selected!");
-                return;
-            }
-            foreach(GameObject waypoint in Selection.objects) {
-                if(waypoint.TryGetComponent(out Waypoint way)) {
-                    if(way==this)
+    public void ToggleOneWay() {
+        oneWay = !oneWay;
+        if(!oneWay) {
+            foreach (var neighbor in neighbors) {
+                if(neighbor != null) {
+                    if(neighbor.neighbors.Contains(this))
                         continue;
-                    neighbors.Add(way);
+                    neighbor.neighbors.Add(this);
                 }
             }
         }
-
-        if(disconnect) {
-            disconnect = false;
-            if(Selection.objects.Length<2) {
-                Debug.Log("Not enough waypoints selected!");
-                return;
+        if(oneWay) {
+            foreach(var neighbor in neighbors) {
+                if(neighbor != null) {
+                    if(neighbor.neighbors.Contains(this))
+                        neighbor.neighbors.Remove(this);
+                }
             }
-            foreach(GameObject a in Selection.objects) {
-                foreach(GameObject b in Selection.objects) {
-                    if(a.TryGetComponent(out Waypoint waypoint_a) && b.TryGetComponent(out Waypoint waypoint_b)) {
-                        if(waypoint_a.neighbors.Contains(waypoint_b))
-                            waypoint_a.neighbors.Remove(waypoint_b);
-                    }
+        }
+    }
+
+    public void CreateNeighbor() {
+        if(Selection.objects.Length>1) {
+            Debug.Log("Too many waypoints selected, adjacent nodes would be ambiguous.");
+            return;
+        }
+        Waypoint newPoint = Object.Instantiate(waypointPrefab, transform.parent).GetComponent<Waypoint>();
+        newPoint.neighbors = new List<Waypoint>();
+        newPoint.neighbors.Add(this);
+        if(!oneWay)
+            neighbors.Add(newPoint);
+        Selection.activeGameObject = newPoint.gameObject;
+    }
+
+    public void Connect() {
+        foreach(GameObject waypoint_a in Selection.objects) {
+            foreach(GameObject waypoint_b in Selection.objects) {
+                if(waypoint_a.TryGetComponent(out Waypoint way_a) && waypoint_b.TryGetComponent(out Waypoint way_b)) {
+                    if(way_b==way_a)
+                        continue;
+                    if(!way_a.neighbors.Contains(way_b))
+                        way_a.neighbors.Add(way_b);
+                }
+            }
+        }
+    }
+
+    public void Disconnect() {
+        foreach(GameObject a in Selection.objects) {
+            foreach(GameObject b in Selection.objects) {
+                if(a.TryGetComponent(out Waypoint waypoint_a) && b.TryGetComponent(out Waypoint waypoint_b)) {
+                    if(waypoint_a.neighbors.Contains(waypoint_b))
+                        waypoint_a.neighbors.Remove(waypoint_b);
                 }
             }
         }
@@ -110,5 +117,33 @@ public class Waypoint : MonoBehaviour
     				neighbor.neighbors.Remove(this);
     		}
     	}
+    }
+}
+
+
+[CustomEditor(typeof(Waypoint)), CanEditMultipleObjects]
+public class WaypointEditor : Editor {
+    public override void OnInspectorGUI() {
+        var waypoint = target as Waypoint;
+        waypoint.waypointPrefab = waypoint.gameObject;
+        //waypoint.waypointPrefab = EditorGUILayout.ObjectField("Waypoint Prefab", waypoint.waypointPrefab, typeof(GameObject), false) as GameObject;
+        //waypoint.neighbors = EditorGUILayout.ObjectField("Neighbors", waypoint.neighbors, typeof(List<GameObject>), false);
+        if(waypoint.oneWay) {
+            if(GUILayout.Button("Convert to Two-Way"))
+                waypoint.ToggleOneWay();
+        } else {
+            if(GUILayout.Button("Convert to One-Way"))
+                waypoint.ToggleOneWay();
+        }
+        if(GUILayout.Button("Add Adjacent Node")) {
+            waypoint.CreateNeighbor();
+        }
+        if(Selection.objects.Length>1) {
+            if(GUILayout.Button("Connect"))
+                waypoint.Connect();
+            if(GUILayout.Button("Disconnect")) {
+                waypoint.Disconnect();
+            }
+        }
     }
 }
