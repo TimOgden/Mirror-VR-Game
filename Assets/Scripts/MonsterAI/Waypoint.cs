@@ -25,6 +25,7 @@ public class Waypoint : MonoBehaviour
         }
 
         foreach(var neighbor in toRemove) {
+            Debug.Log(neighbor + " is null or missing! It is being removed.");
             neighbors.Remove(neighbor);
         }
     }
@@ -110,6 +111,12 @@ public class Waypoint : MonoBehaviour
         }
     }
 
+    public void ShowNeighbors() {
+        foreach(Waypoint neighbor in neighbors) {
+            Debug.Log(neighbor);
+        }
+    }
+
     void OnDisable() {
     	foreach(var neighbor in neighbors) {
     		if(neighbor != null) {
@@ -129,6 +136,9 @@ public class WaypointEditor : Editor {
         waypoint.waypointPrefab = waypoint.gameObject;
         //waypoint.waypointPrefab = EditorGUILayout.ObjectField("Waypoint Prefab", waypoint.waypointPrefab, typeof(GameObject), false) as GameObject;
         //waypoint.neighbors = EditorGUILayout.ObjectField("Neighbors", waypoint.neighbors, typeof(List<GameObject>), false);
+        if(GUILayout.Button("Show Neighbors")) {
+            waypoint.ShowNeighbors();
+        }
         if(waypoint.oneWay) {
             if(GUILayout.Button("Convert to Two-Way"))
                 waypoint.ToggleOneWay();
@@ -158,7 +168,7 @@ public class WaypointEditor : Editor {
 
 
     private void CreateMidpoint(Waypoint a, Waypoint b) {
-        Waypoint c = Object.Instantiate(waypoint.gameObject, (a.transform.position + b.transform.position)/2, Quaternion.identity).GetComponent<Waypoint>();
+        Waypoint c = Object.Instantiate(waypoint.gameObject, (a.transform.position + b.transform.position)/2, Quaternion.identity, a.transform.parent).GetComponent<Waypoint>();
         if(a.neighbors.Contains(b))
             a.neighbors.Remove(b);
         if(b.neighbors.Contains(a))
