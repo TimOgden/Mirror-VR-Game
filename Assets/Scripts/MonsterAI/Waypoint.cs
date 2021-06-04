@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
-[System.Serializable]
+[System.Serializable, ExecuteInEditMode]
 public class Waypoint : MonoBehaviour
 {
 	public static readonly Color unidirectional = new Color(1f, .59f, 1f, 1f);
@@ -107,6 +107,17 @@ public class Waypoint : MonoBehaviour
         m_neighbors.DeleteArrayElementAtIndex(index);
         m_neighbors.DeleteArrayElementAtIndex(index);
         so.ApplyModifiedProperties();
+    }
+
+    void OnDestroy() {
+        foreach(Waypoint neighbor in neighbors) {
+            var so = new SerializedObject(neighbor);
+            var neighbors_prop = so.FindProperty("neighbors");
+            int index = neighbor.neighbors.IndexOf(this);
+            neighbors_prop.DeleteArrayElementAtIndex(index);
+            neighbors_prop.DeleteArrayElementAtIndex(index);
+            so.ApplyModifiedProperties();
+        }
     }
 }
 
