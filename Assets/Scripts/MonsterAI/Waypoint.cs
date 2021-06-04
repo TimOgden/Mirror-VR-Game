@@ -18,8 +18,11 @@ public class Waypoint : MonoBehaviour
     public float distance
     	{ get; set; }
 
+    private SerializedProperty m_neighbors;
 
-    void Start() {
+    void OnEnable() {
+        var so = new SerializedObject(this);
+        m_neighbors = so.FindProperty("neighbors");
         List<Waypoint> toRemove = new List<Waypoint>();
         foreach(var neighbor in neighbors) {
             if(neighbor==null)
@@ -62,7 +65,7 @@ public class Waypoint : MonoBehaviour
                 if(neighbor != null) {
                     if(neighbor.neighbors.Contains(this))
                         continue;
-                    neighbor.neighbors.Add(this);
+                    neighbor.Add(this);
                 }
             }
         }
@@ -70,7 +73,7 @@ public class Waypoint : MonoBehaviour
             foreach(var neighbor in neighbors) {
                 if(neighbor != null) {
                     if(neighbor.neighbors.Contains(this))
-                        neighbor.neighbors.Remove(this);
+                        neighbor.Remove(this);
                 }
             }
         }
@@ -83,16 +86,27 @@ public class Waypoint : MonoBehaviour
         }
         Waypoint newPoint = Object.Instantiate(waypointPrefab, transform.parent).GetComponent<Waypoint>();
         newPoint.neighbors = new List<Waypoint>();
-        newPoint.neighbors.Add(this);
+        newPoint.Add(this);
         if(!oneWay)
-            neighbors.Add(newPoint);
+            Add(newPoint);
         Selection.activeGameObject = newPoint.gameObject;
     }
 
-    public void ShowNeighbors() {
-        foreach(Waypoint neighbor in neighbors) {
-            Debug.Log(neighbor);
-        }
+    public void Add(Waypoint neighbor) {
+        var so = new SerializedObject(this);
+        m_neighbors = so.FindProperty("neighbors");
+        m_neighbors.arraySize++;
+        m_neighbors.GetArrayElementAtIndex(m_neighbors.arraySize-1).objectReferenceValue = neighbor;
+        so.ApplyModifiedProperties();
+    }
+
+    public void Remove(Waypoint neighbor) {
+        var so = new SerializedObject(this);
+        m_neighbors = so.FindProperty("neighbors");
+        int index = neighbors.IndexOf(neighbor);
+        m_neighbors.DeleteArrayElementAtIndex(index);
+        m_neighbors.DeleteArrayElementAtIndex(index);
+        so.ApplyModifiedProperties();
     }
 }
 
@@ -113,9 +127,6 @@ public class WaypointEditor : Editor {
         waypoint = target as Waypoint;
         waypoint.waypointPrefab = waypoint.gameObject;
 
-        if(GUILayout.Button("Show Neighbors")) {
-            waypoint.ShowNeighbors();
-        }
         if(waypoint.oneWay) {
             if(GUILayout.Button("Convert to Two-Way"))
                 waypoint.ToggleOneWay();
@@ -148,17 +159,19 @@ public class WaypointEditor : Editor {
     private void CreateMidpoint(Waypoint a, Waypoint b) {
         if(waypoint.waypointPrefab!=null) {
             Waypoint c = Object.Instantiate(waypoint.gameObject, (a.transform.position + b.transform.position)/2, Quaternion.identity, a.transform.parent).GetComponent<Waypoint>();
-            if(a.neighbors.Contains(b))
-                a.neighbors.Remove(b);
-            if(b.neighbors.Contains(a))
-                b.neighbors.Remove(a);
+            if(a.neighbors.Contains(b)) {
+                a.Remove(b);
+            }
+            if(b.neighbors.Contains(a)) {
+                b.Remove(a);
+            }
             c.neighbors = new List<Waypoint>();
-            c.neighbors.Add(a);
-            c.neighbors.Add(b);
+            c.Add(a);
+            c.Add(b);
 
             if(!c.oneWay) {
-                a.neighbors.Add(c);
-                b.neighbors.Add(c);
+                a.Add(c);
+                b.Add(c);
             }
 
             Selection.activeGameObject = c.gameObject;
@@ -171,8 +184,9 @@ public class WaypointEditor : Editor {
                 if(waypoint_a.TryGetComponent(out Waypoint way_a) && waypoint_b.TryGetComponent(out Waypoint way_b)) {
                     if(way_b==way_a)
                         continue;
-                    if(!way_a.neighbors.Contains(way_b))
-                        way_a.neighbors.Add(way_b);
+                    if(!way_a.neighbors.Contains(way_b)) {
+                        way_a.Add(way_b);
+                    }
                 }
             }
         }
@@ -182,10 +196,15 @@ public class WaypointEditor : Editor {
         foreach(GameObject a in Selection.objects) {
             foreach(GameObject b in Selection.objects) {
                 if(a.TryGetComponent(out Waypoint waypoint_a) && b.TryGetComponent(out Waypoint waypoint_b)) {
-                    if(waypoint_a.neighbors.Contains(waypoint_b))
-                        waypoint_a.neighbors.Remove(waypoint_b);
+                    if(waypoint_a.neighbors.Contains(waypoint_b)) {
+                        waypoint_a.Remove(waypoint_b);
+                    }
                 }
             }
         }
     }
+
+    
+
+    
 }
