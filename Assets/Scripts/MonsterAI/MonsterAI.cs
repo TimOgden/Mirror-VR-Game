@@ -19,9 +19,8 @@ public class MonsterAI : MonoBehaviour
 	public float detectionDistance;
 	public float detectionSpeed;
 	public float undetectionSpeed;
-	public float selfDetectionSpeed;
+    private float timeSpottedSelf;
 	private float awareness;
-    private float selfAwareness;
 	private Vector3 refugePoint = Vector3.zero; //Where the monster should run to after it detects itself
 	private float idleTime; // is picked at random each time monster enters 'Idle' state.
 	public Vector2 idleTimeRange = new Vector2(3f, 12f);
@@ -55,11 +54,12 @@ public class MonsterAI : MonoBehaviour
 	public void MonsterDetected(MonsterSpotter spotter) {
 		// monster saw itself, note location of spotter and set refugePoint to
 		// opposite direction of spotter and maybe find hiding point near there.
-        selfAwareness += selfDetectionSpeed * Mathf.Pow((spotter.transform.position - transform.position).magnitude, -2f) * Time.deltaTime;
+        timeSpottedSelf += Time.deltaTime;
+        
 	}
 
 	public void MonsterNotDetected(MonsterSpotter spotter) {
-		selfAwareness -= undetectionSpeed * Time.deltaTime;
+        return;
 	}
 
 	private bool CheckForPlayer() {
@@ -129,6 +129,13 @@ public class MonsterAI : MonoBehaviour
         		agent.speed = 1f;
         		agent.SetDestination(refugePoint);
         	},
+            onLogic: (state) => {
+                timeSpottedSelf -= Time.deltaTime * 5f;
+                timeSpottedSelf = Mathf.Max(0f, timeSpottedSelf);
+            },
+            onExit: (state) => {
+                timeSpottedSelf = 0f;
+            },
         debug: debug));
 
         fsm.AddState("Suspicious", new State(
@@ -174,7 +181,7 @@ public class MonsterAI : MonoBehaviour
         ));
 
         //fsm.AddTransitionFromAny(new Transition("", "Run Away", (transition) => selfAwareness>=.1f));
-        fsm.AddTransition(new Transition("Run Away", "Suspicious", (transition) => AgentReachedDestination()));
+        fsm.AddTransition(new Transition("Run Away", "Suspicious", (transition) => AgentReachedDestination() && timeSpottedSelf<.5f));
         fsm.AddTransition(new Transition("Patrolling","Suspicious",(transition) => awareness>=.1f));
         fsm.AddTransition(new Transition("Suspicious", "Patrolling", (transition) => awareness<.1f && AgentReachedDestination()));
         fsm.AddTransition(new Transition("Suspicious", "Sneaking Up", (transition) => awareness>=.25f));
@@ -193,9 +200,9 @@ public class MonsterAI : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        selfAwareness = Mathf.Clamp(selfAwareness, 0f, 1f);
+        Debug.Log(timeSpottedSelf);
     	CheckForPlayer();
-    	if(selfAwareness>=.1f && fsm.ActiveStateName != "Run Away") {
+    	if(timeSpottedSelf>=.5f && fsm.ActiveStateName != "Run Away") {
             refugePoint = pathManager.GetRefugePoint(target.transform.position).transform.position;
             locationOfInterest = target.transform.position;
             fsm.RequestStateChange("Run Away", forceInstantly: true);
